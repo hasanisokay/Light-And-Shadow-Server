@@ -1,0 +1,59 @@
+[
+    {
+      "image": "https://i.ibb.co/xCwc8mT/1.jpg",
+      "name": "John Smith",
+      "email": "john.smith@example.com",
+      "students_in_class": 15,
+      "classes_taken": 8
+    },
+    {
+      "image": "https://i.ibb.co/w7gpBTW/2.jpg",
+      "name": "Daniel Johnson",
+      "email": "sarah.thompson@example.com",
+      "students_in_class": 12,
+      "classes_taken": 10
+    },
+    {
+      "image": "https://i.ibb.co/StyVHQZ/3.jpg",
+      "name": "Michael Davis",
+      "email": "michael.davis@example.com",
+      "students_in_class": 18,
+      "classes_taken": 5
+    },
+    {
+      "image": "https://i.ibb.co/xh7Tc6f/4.jpg",
+      "name": "Abdullah Hasan",
+      "email": "emily.johnson@example.com",
+      "students_in_class": 10,
+      "classes_taken": 12
+    },
+    {
+      "image": "https://i.ibb.co/nw5ys0D/5.jpg",
+      "name": "David Wilson",
+      "email": "david.wilson@example.com",
+      "students_in_class": 20,
+      "classes_taken": 15
+    },
+    {
+      "image": "https://i.ibb.co/41gwcg7/6.jpg",
+      "name": "Hamidani Josh",
+      "email": "alexandra.moore@example.com",
+      "students_in_class": 8,
+      "classes_taken": 6
+    },
+    {
+      "image": "https://i.ibb.co/HTsvH3m/7.jpg",
+      "name": "James Willium",
+      "email": "daniel.lee@example.com",
+      "students_in_class": 14,
+      "classes_taken": 9
+    },
+    {
+      "image": "https://i.ibb.co/8MCCqsP/8.jpg",
+      "name": "Rakib Uddin",
+      "email": "olivia.rodriguez@example.com",
+      "students_in_class": 16,
+      "classes_taken": 7
+    }
+  ]
+  

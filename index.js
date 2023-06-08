@@ -6,10 +6,10 @@ const port = process.env.PORT || 5000;
 require("dotenv").config()
 const stripe = require('stripe')(process.env.PAYMENT_SECRET_KEY);
 
-const corsOptions ={
-  origin:'http://localhost:5173', 
-  credentials:true,            //access-control-allow-credentials:true
-  optionSuccessStatus:200
+const corsOptions = {
+  origin: 'http://localhost:5173',
+  credentials: true,            //access-control-allow-credentials:true
+  optionSuccessStatus: 200
 }
 app.use(cors(corsOptions));
 
@@ -20,17 +20,17 @@ app.use(express.json())
 // app.use(cors())
 
 // verifying jwt token
-const verifyJWT = (req,res,next)=>{
+const verifyJWT = (req, res, next) => {
   const authorization = req.headers.authorization;
-  if(!authorization){
-    return res.status(401).send({error:true, message:"unauthorized access"})
+  if (!authorization) {
+    return res.status(401).send({ error: true, message: "unauthorized access" })
   }
   // bearer token
   const token = authorization.split(" ")[1]
 
-  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err,decoded)=>{
-    if(err){
-      return res.status(401).send({error: true, message: "unauthorized access"})
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ error: true, message: "unauthorized access" })
     }
     req.decoded = decoded
     next();
@@ -56,48 +56,67 @@ async function run() {
     // await client.connect();
     // Send a ping to confirm a successful connection
     const menuCollection = client.db("lightAndShadow").collection("menuCollection")
-    const reviewsCollection =client.db("lightAndShadow").collection("reviewsCollection")    
-    const cartCollection =client.db("lightAndShadow").collection("cartCollection")    
-    const usersCollection =client.db("lightAndShadow").collection("users")    
-    const paymentCollection =client.db("lightAndShadow").collection("paymentCollection")    
-    
+    const reviewsCollection = client.db("lightAndShadow").collection("reviewsCollection")
+
+    const instructorCollection = client.db("lightAndShadow").collection("instructors")
+    const usersCollection = client.db("lightAndShadow").collection("users")
+    const classCollection = client.db("lightAndShadow").collection("classes")
     // jwt
-    app.post("/jwt", (req,res)=>{
+    app.post("/jwt", (req, res) => {
       const userMail = req.body;
-      const token = jwt.sign(userMail, process.env.ACCESS_TOKEN_SECRET, {expiresIn:'10hr'})
-      res.send({token}) 
+      const token = jwt.sign(userMail, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '10hr' })
+      res.send({ token })
     })
 
     // admin verify middleware
     // warning: use verifyJWT before verifyAdmin. cause decode email is used here.
-    const verifyAdmin = async(req,res,next)=>{
+    const verifyAdmin = async (req, res, next) => {
       const email = req.decoded.email;
-      const query = {email: email};
+      const query = { email: email };
       const user = await usersCollection.findOne(query);
-      if(user?.role !== "admin"){
-        return res.status(403).send({error: true, message: "forbiddedn access"})
+      if (user?.role !== "admin") {
+        return res.status(403).send({ error: true, message: "forbiddedn access" })
       }
     }
 
+    // getting all the classes
+    app.get("/classes", async(req,res)=>{
+      const result = await classCollection.find().toArray()
+      res.send(result)
+    })
+    // getting a instructors classes.
+    app.get("/instructor/:id", async(req,res)=>{
+      const instructorId = req.params.id;
+      const queryForInstructor = { _id: new ObjectId(instructorId)}
+      const instructor = await instructorCollection.findOne(queryForInstructor)
+      const name = instructor.name;
 
-
-
+      const queryForClasses = { class_instructor_name: name }
+      const result = await classCollection.find(queryForClasses).toArray()
+      res.send(result)
+    })
+    // getting all instructos data
+    app.get("/instructors", async (req, res) => {
+      const result = await instructorCollection.find().toArray()
+      res.send(result)
+    })
 
     // user api
     // writing frist time sign upd users name and email in the database
-    app.post('/users',  async(req,res)=>{
+    app.post('/users', async (req, res) => {
       const newUser = req.body;
       newUser.role = "student"
-      const query = {email:newUser.email}
+      const query = { email: newUser.email }
       const existingUser = await usersCollection.findOne(query);
-      if(!existingUser){
+      if (!existingUser) {
         const result = await usersCollection.insertOne(newUser)
         res.send(result)
         return
       }
-      return res.send({message:"user already exists"})
+      return res.send({ message: "user already exists" })
     })
 
+   
 
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
@@ -118,10 +137,10 @@ run().catch(console.dir);
 
 
 
-app.get("/", (req,res)=>{
-    res.send("Light & Shadow server is running")
+app.get("/", (req, res) => {
+  res.send("Light & Shadow server is running")
 })
 
-app.listen(port, ()=>{
-    console.log("Light & Shadow is running on", port);
+app.listen(port, () => {
+  console.log("Light & Shadow is running on", port);
 })
