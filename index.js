@@ -80,14 +80,14 @@ async function run() {
     }
 
     // getting all the classes
-    app.get("/classes", async(req,res)=>{
+    app.get("/classes", async (req, res) => {
       const result = await classCollection.find().toArray()
       res.send(result)
     })
     // getting a instructors classes.
-    app.get("/instructor/:id", async(req,res)=>{
+    app.get("/instructor/:id", async (req, res) => {
       const instructorId = req.params.id;
-      const queryForInstructor = { _id: new ObjectId(instructorId)}
+      const queryForInstructor = { _id: new ObjectId(instructorId) }
       const instructor = await instructorCollection.findOne(queryForInstructor)
       const name = instructor.name;
 
@@ -116,7 +116,47 @@ async function run() {
       return res.send({ message: "user already exists" })
     })
 
-   
+    // check if a user is admin or not
+    app.get("/users/admin/:email", verifyJWT, async (req, res) => {
+      // first level of security is checking verifyJWT token. 
+      const email = req.params.email;
+      // second level of security. checking user email and token email same or not
+      if (req.decoded.email !== email) {
+        res.send({ admin: false })
+        return
+      }
+
+      // checking admin
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      const result = { admin: user?.role === "admin" }
+      res.send(result);
+
+    })
+
+    // checking if user is instructor
+    app.get("/users/instructor/:email", verifyJWT, async (req, res) => {
+      const email = req.params.email;
+      if (req.decoded.email !== email) {
+        res.send({ instructor: false })
+        return
+      }
+      const query = {email : email};
+      const user = await usersCollection.findOne(query);
+      const result = { instructor: user.role ==="instructor" }
+      res.send(result)
+    })
+
+
+
+    // secure all users route
+    /** 
+     * 0. dont show secure links to every one.
+     * 1. use verifyJWT
+     * 2. use verifyAdmin middleware
+     *  
+    */
+
 
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
