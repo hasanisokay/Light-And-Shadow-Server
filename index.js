@@ -61,6 +61,8 @@ async function run() {
     const instructorCollection = client.db("lightAndShadow").collection("instructors")
     const usersCollection = client.db("lightAndShadow").collection("users")
     const classCollection = client.db("lightAndShadow").collection("classes")
+    const selectedClassCollection = client.db("lightAndShadow").collection("selectedClass")
+
     // jwt
     app.post("/jwt", (req, res) => {
       const userMail = req.body;
@@ -143,10 +145,33 @@ async function run() {
       }
       const query = {email : email};
       const user = await usersCollection.findOne(query);
-      const result = { instructor: user.role ==="instructor" }
+      const result = { instructor: user?.role ==="instructor" }
       res.send(result)
     })
 
+    // getting popular classes
+    app.get("/classes/popular", async(req,res)=>{
+      const result = await classCollection.find({ available_seats: { $gt: 0 } }).sort({available_seats : 1}).limit(6).toArray()
+      res.send(result)
+    })
+    // getting popular instructors
+    app.get("/instructors/popular", async(req,res)=>{
+      const result = await instructorCollection.find().sort({students_in_class : -1}).limit(6).toArray()
+      res.send(result)
+    })
+
+    app.post("/selectedClass", verifyJWT, async(req,res)=>{
+      const selectedClass = req.body;
+      const query = { classId :selectedClass.classId, clickedUserEmail:selectedClass.clickedUserEmail };
+      console.log(selectedClass);
+      const previouslySelected = await selectedClassCollection.findOne(query)
+      if(previouslySelected){
+        res.send({message:"Already Selected"})
+        return
+      }
+      const result = await selectedClassCollection.insertOne(selectedClass)
+      res.send(result)
+    })
 
 
     // secure all users route
@@ -156,6 +181,7 @@ async function run() {
      * 2. use verifyAdmin middleware
      *  
     */
+
 
 
     await client.db("admin").command({ ping: 1 });
