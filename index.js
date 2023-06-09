@@ -160,6 +160,7 @@ async function run() {
       res.send(result)
     })
 
+    // adding selected class to database and checking if its already added by same user.
     app.post("/selectedClass", verifyJWT, async(req,res)=>{
       const selectedClass = req.body;
       const query = { classId :selectedClass.classId, clickedUserEmail:selectedClass.clickedUserEmail };
@@ -173,6 +174,30 @@ async function run() {
       res.send(result)
     })
 
+    // getting selected items for a user 
+    app.get("/getSelectedClass", verifyJWT, async(req,res)=>{
+
+      const email = req.query.email;
+      console.log(email);
+
+      const result = await selectedClassCollection.aggregate([
+        {
+          $match: { clickedUserEmail: email }
+        },
+        {
+          $lookup: {
+            from: "classes",
+            localField: "classId",
+            foreignField: "_id",
+            as: "matchedData"
+          }
+        }
+      ]).toArray()
+      console.log(result);
+      res.send(result)
+    } )
+
+    // ........................................ 
 
     // secure all users route
     /** 
