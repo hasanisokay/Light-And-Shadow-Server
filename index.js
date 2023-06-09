@@ -143,31 +143,31 @@ async function run() {
         res.send({ instructor: false })
         return
       }
-      const query = {email : email};
+      const query = { email: email };
       const user = await usersCollection.findOne(query);
-      const result = { instructor: user?.role ==="instructor" }
+      const result = { instructor: user?.role === "instructor" }
       res.send(result)
     })
 
     // getting popular classes
-    app.get("/classes/popular", async(req,res)=>{
-      const result = await classCollection.find({ available_seats: { $gt: 0 } }).sort({available_seats : 1}).limit(6).toArray()
+    app.get("/classes/popular", async (req, res) => {
+      const result = await classCollection.find({ available_seats: { $gt: 0 } }).sort({ available_seats: 1 }).limit(6).toArray()
       res.send(result)
     })
     // getting popular instructors
-    app.get("/instructors/popular", async(req,res)=>{
-      const result = await instructorCollection.find().sort({students_in_class : -1}).limit(6).toArray()
+    app.get("/instructors/popular", async (req, res) => {
+      const result = await instructorCollection.find().sort({ students_in_class: -1 }).limit(6).toArray()
       res.send(result)
     })
 
     // adding selected class to database and checking if its already added by same user.
-    app.post("/selectedClass", verifyJWT, async(req,res)=>{
+    app.post("/selectedClass", verifyJWT, async (req, res) => {
       const selectedClass = req.body;
-      const query = { classId :selectedClass.classId, clickedUserEmail:selectedClass.clickedUserEmail };
+      const query = { classId: selectedClass.classId, clickedUserEmail: selectedClass.clickedUserEmail };
       console.log(selectedClass);
       const previouslySelected = await selectedClassCollection.findOne(query)
-      if(previouslySelected){
-        res.send({message:"Already Selected"})
+      if (previouslySelected) {
+        res.send({ message: "Already Selected" })
         return
       }
       const result = await selectedClassCollection.insertOne(selectedClass)
@@ -175,27 +175,15 @@ async function run() {
     })
 
     // getting selected items for a user 
-    app.get("/getSelectedClass", verifyJWT, async(req,res)=>{
-
+    app.get("/getSelectedClass", verifyJWT, async (req, res) => {
       const email = req.query.email;
-      console.log(email);
-
-      const result = await selectedClassCollection.aggregate([
-        {
-          $match: { clickedUserEmail: email }
-        },
-        {
-          $lookup: {
-            from: "classes",
-            localField: "classId",
-            foreignField: "_id",
-            as: "matchedData"
-          }
-        }
-      ]).toArray()
-      console.log(result);
-      res.send(result)
-    } )
+      const foundIds = await selectedClassCollection.find({ clickedUserEmail: email }, { classId: 1 }).toArray();
+      const classIds = foundIds.map((selectedClass) => new ObjectId(selectedClass.classId));
+      console.log(classIds);
+      const classes = await classCollection.find({_id: { $in: classIds }}).toArray()
+      console.log(classes);
+      res.send(classes)
+    });
 
     // ........................................ 
 
@@ -207,6 +195,7 @@ async function run() {
      *  
     */
 
+    
 
 
     await client.db("admin").command({ ping: 1 });
