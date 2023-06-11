@@ -219,6 +219,14 @@ async function run() {
     // adding successfull payments to db
     app.post("/payments", verifyJWT, async (req, res) => {
       const paymentData = req.body;
+      const paidClassId = paymentData.paidForClass._id
+      const filter = {_id: new ObjectId(paidClassId)} 
+      const updateDoc ={
+        $inc: {
+          students_in_class: 1
+        }
+      }
+      const increaClassInStudnets = await classCollection.updateOne(filter, updateDoc)
       const result = await paymentCollection.insertOne(paymentData);
       res.send(result)
     })
