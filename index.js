@@ -80,11 +80,24 @@ async function run() {
       if (user?.role !== "admin") {
         return res.status(403).send({ error: true, message: "forbiddedn access" })
       }
+      next();
     }
+
+    // verifying a user is instructor or not
+    const verifyInstructor = async (req, res, next) => {
+      const email = req?.decoded?.email;
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      if (user?.role !== "instructor") {
+        return res.status(403).send({ error: true, message: "forbiddedn access" })
+      }
+      next();
+    }
+
 
     // getting all the classes
     app.get("/classes", async (req, res) => {
-      const result = await classCollection.find().toArray()
+      const result = await classCollection.find({ status: "approved" }).toArray()
       res.send(result)
     })
     // getting a instructors classes.
@@ -152,7 +165,7 @@ async function run() {
 
     // getting popular classes
     app.get("/classes/popular", async (req, res) => {
-      const result = await classCollection.find({ available_seats: { $gt: 0 } }).sort({ available_seats: 1 }).limit(6).toArray()
+      const result = await classCollection.find().sort({ students_in_class: -1 }).limit(6).toArray();
       res.send(result)
     })
     // getting popular instructors
@@ -186,12 +199,13 @@ async function run() {
       }
       const foundIds = await selectedClassCollection.find({ clickedUserEmail: email }).toArray();
       let filteredIds = []
-      const filterdData = foundIds.filter(item=>{
-        if(item.status===status){
-          filteredIds.push( new ObjectId(item.classId))
-        }})
-        // console.log("hitted with", status);
-      const classes = await classCollection.find({ _id: { $in: filteredIds }}).toArray()
+      const filterdData = foundIds.filter(item => {
+        if (item.status === status) {
+          filteredIds.push(new ObjectId(item.classId))
+        }
+      })
+      // console.log("hitted with", status);
+      const classes = await classCollection.find({ _id: { $in: filteredIds } }).toArray()
       res.send(classes)
     });
 
@@ -201,7 +215,7 @@ async function run() {
       const result = await selectedClassCollection.deleteOne({ classId: id })
       res.send(result)
     })
-    
+
     // create payment intent
     app.post("/create-payment-intent", verifyJWT, async (req, res) => {
       const { price } = req.body;
@@ -217,17 +231,17 @@ async function run() {
     })
 
     // adding successfull payments to db
-    app.post("/payments", verifyJWT, async(req,res)=>{
+    app.post("/payments", verifyJWT, async (req, res) => {
       const paymentData = req.body;
       const result = await paymentCollection.insertOne(paymentData);
       res.send(result)
     })
     // change status to enrolled after payment
-    app.patch("/selectedClass/:id", verifyJWT, async(req,res)=>{
+    app.patch("/selectedClass/:id", verifyJWT, async (req, res) => {
       const id = req.params.id;
-      const filter = {classId:id}
+      const filter = { classId: id }
       const updateDoc = {
-        $set:{
+        $set: {
           status: 'enrolled'
         }
       }
@@ -236,17 +250,33 @@ async function run() {
         { $inc: { available_seats: -1 } },
         { returnOriginal: false }
       )
-      const result = await selectedClassCollection.updateOne(filter,updateDoc);
+      const result = await selectedClassCollection.updateOne(filter, updateDoc);
       console.log(result);
       res.send(result)
     })
 
     // getting all payments for a user
-    app.get("/paymentHistory", verifyJWT, async(req,res)=>{
+    app.get("/paymentHistory", verifyJWT, async (req, res) => {
       const email = req.query.email;
-      const result = await paymentCollection.find({email: email}).sort({ date: -1 }).toArray()
+      const result = await paymentCollection.find({ email: email }).sort({ date: -1 }).toArray()
       res.send(result)
     })
+
+
+    // instructors activity here
+    
+    // instructors adding class to db
+    app.post("/addNewClass", verifyJWT, verifyInstructor, async(req,res)=>{
+      const newClass = req.body;
+      newClass.students_in_class = 0;
+      newClass.status = "pending";
+      const result = await classCollection.insertOne(newClass)
+      res.send(result)
+    })
+
+
+
+
 
     // app.patch("/users/admin/:id", async (req, res) => {
     //   const id = req.params.id;
@@ -261,6 +291,13 @@ async function run() {
     //   res.send(result);
     // })
     // ........................................ 
+    // dummy api to update all field. 
+    // app.get("/statusupdate", async (req, res) => {
+    //   const fieldToAdd = 'students_in_class';
+    //   const fieldValue = 20;
+    //   const result = classCollection.updateMany({}, { $set: { [fieldToAdd]: fieldValue } })
+    //   res.send(result)
+    // })
 
     // secure all users route
     /** 
@@ -269,6 +306,7 @@ async function run() {
      * 2. use verifyAdmin middleware
      *  
     */
+
 
 
     await client.db("admin").command({ ping: 1 });
