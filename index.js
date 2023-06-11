@@ -62,6 +62,7 @@ async function run() {
     const usersCollection = client.db("lightAndShadow").collection("users")
     const classCollection = client.db("lightAndShadow").collection("classes")
     const selectedClassCollection = client.db("lightAndShadow").collection("selectedClass")
+    const paymentCollection = client.db("lightAndShadow").collection("payments")
 
     // jwt
     app.post("/jwt", (req, res) => {
@@ -73,7 +74,7 @@ async function run() {
     // admin verify middleware
     // warning: use verifyJWT before verifyAdmin. cause decode email is used here.
     const verifyAdmin = async (req, res, next) => {
-      const email = req.decoded.email;
+      const email = req?.decoded?.email;
       const query = { email: email };
       const user = await usersCollection.findOne(query);
       if (user?.role !== "admin") {
@@ -123,7 +124,7 @@ async function run() {
       // first level of security is checking verifyJWT token. 
       const email = req.params.email;
       // second level of security. checking user email and token email same or not
-      if (req.decoded.email !== email) {
+      if (req.decoded?.email !== email) {
         res.send({ admin: false })
         return
       }
@@ -139,7 +140,7 @@ async function run() {
     // checking if user is instructor
     app.get("/users/instructor/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
-      if (req.decoded.email !== email) {
+      if (req.decoded?.email !== email) {
         res.send({ instructor: false })
         return
       }
@@ -164,27 +165,101 @@ async function run() {
     app.post("/selectedClass", verifyJWT, async (req, res) => {
       const selectedClass = req.body;
       const query = { classId: selectedClass.classId, clickedUserEmail: selectedClass.clickedUserEmail };
-      console.log(selectedClass);
+      // console.log(selectedClass);
       const previouslySelected = await selectedClassCollection.findOne(query)
       if (previouslySelected) {
         res.send({ message: "Already Selected" })
         return
       }
+      selectedClass.status = "pending"
       const result = await selectedClassCollection.insertOne(selectedClass)
       res.send(result)
     })
 
     // getting selected items for a user 
     app.get("/getSelectedClass", verifyJWT, async (req, res) => {
-      const email = req.query.email;
-      const foundIds = await selectedClassCollection.find({ clickedUserEmail: email }, { classId: 1 }).toArray();
-      const classIds = foundIds.map((selectedClass) => new ObjectId(selectedClass.classId));
-      console.log(classIds);
-      const classes = await classCollection.find({_id: { $in: classIds }}).toArray()
-      console.log(classes);
+      const decodedEmail = req.decoded?.email;
+      const email = req.query?.email;
+      const status = req.query?.status;
+      if (email !== decodedEmail) {
+        return res.status(403).send({ error: true, message: "forbidden access" })
+      }
+      const foundIds = await selectedClassCollection.find({ clickedUserEmail: email }).toArray();
+      let filteredIds = []
+      const filterdData = foundIds.filter(item=>{
+        if(item.status===status){
+          filteredIds.push( new ObjectId(item.classId))
+        }})
+        // console.log("hitted with", status);
+      const classes = await classCollection.find({ _id: { $in: filteredIds }}).toArray()
       res.send(classes)
     });
 
+    // deleting students selected class
+    app.delete("/deleteClass/:id", verifyJWT, async (req, res) => {
+      const id = req.params.id;
+      const result = await selectedClassCollection.deleteOne({ classId: id })
+      res.send(result)
+    })
+    
+    // create payment intent
+    app.post("/create-payment-intent", verifyJWT, async (req, res) => {
+      const { price } = req.body;
+      const amount = price * 100;
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"]
+      });
+      res.send({
+        clientSecret: paymentIntent.client_secret
+      })
+    })
+
+    // adding successfull payments to db
+    app.post("/payments", verifyJWT, async(req,res)=>{
+      const paymentData = req.body;
+      const result = await paymentCollection.insertOne(paymentData);
+      res.send(result)
+    })
+    // change status to enrolled after payment
+    app.patch("/selectedClass/:id", verifyJWT, async(req,res)=>{
+      const id = req.params.id;
+      const filter = {classId:id}
+      const updateDoc = {
+        $set:{
+          status: 'enrolled'
+        }
+      }
+      const reduceAvailableSeats = await classCollection.findOneAndUpdate(
+        { _id: new ObjectId(id) },
+        { $inc: { available_seats: -1 } },
+        { returnOriginal: false }
+      )
+      const result = await selectedClassCollection.updateOne(filter,updateDoc);
+      console.log(result);
+      res.send(result)
+    })
+
+    // getting all payments for a user
+    app.get("/paymentHistory", verifyJWT, async(req,res)=>{
+      const email = req.query.email;
+      const result = await paymentCollection.find({email: email}).sort({ date: -1 }).toArray()
+      res.send(result)
+    })
+
+    // app.patch("/users/admin/:id", async (req, res) => {
+    //   const id = req.params.id;
+    //   // console.log(id);
+    //   const filter = { _id: new ObjectId(id) };
+    //   const updateDoc = {
+    //     $set: {
+    //       role: "admin"
+    //     },
+    //   }
+    //   const result = await usersCollection.updateOne(filter, updateDoc);
+    //   res.send(result);
+    // })
     // ........................................ 
 
     // secure all users route
@@ -194,8 +269,6 @@ async function run() {
      * 2. use verifyAdmin middleware
      *  
     */
-
-    
 
 
     await client.db("admin").command({ ping: 1 });
