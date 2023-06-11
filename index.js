@@ -6,18 +6,10 @@ const port = process.env.PORT || 5000;
 require("dotenv").config()
 const stripe = require('stripe')(process.env.PAYMENT_SECRET_KEY);
 
-const corsOptions = {
-  origin: 'http://localhost:5173',
-  credentials: true,            //access-control-allow-credentials:true
-  optionSuccessStatus: 200
-}
-app.use(cors(corsOptions));
-
 
 // middleware
-
 app.use(express.json())
-// app.use(cors())
+app.use(cors())
 
 // verifying jwt token
 const verifyJWT = (req, res, next) => {
@@ -52,13 +44,6 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
-    // await client.connect();
-    // Send a ping to confirm a successful connection
-    const menuCollection = client.db("lightAndShadow").collection("menuCollection")
-    const reviewsCollection = client.db("lightAndShadow").collection("reviewsCollection")
-
-    const instructorCollection = client.db("lightAndShadow").collection("instructors")
     const usersCollection = client.db("lightAndShadow").collection("users")
     const classCollection = client.db("lightAndShadow").collection("classes")
     const selectedClassCollection = client.db("lightAndShadow").collection("selectedClass")
@@ -72,7 +57,6 @@ async function run() {
     })
 
     // admin verify middleware
-    // warning: use verifyJWT before verifyAdmin. cause decode email is used here.
     const verifyAdmin = async (req, res, next) => {
       const email = req?.decoded?.email;
       const query = { email: email };
@@ -95,25 +79,27 @@ async function run() {
     }
 
 
-    // getting all the classes
+    // getting all the approved classes
     app.get("/classes", async (req, res) => {
       const result = await classCollection.find({ status: "approved" }).toArray()
       res.send(result)
     })
+
     // getting a instructors classes.
     app.get("/instructor/:id", async (req, res) => {
       const instructorId = req.params.id;
       const queryForInstructor = { _id: new ObjectId(instructorId) }
-      const instructor = await instructorCollection.findOne(queryForInstructor)
+      const instructor = await usersCollection.findOne(queryForInstructor)
       const name = instructor.name;
 
       const queryForClasses = { class_instructor_name: name }
       const result = await classCollection.find(queryForClasses).toArray()
       res.send(result)
     })
+
     // getting all instructos data
     app.get("/instructors", async (req, res) => {
-      const result = await instructorCollection.find().toArray()
+      const result = await usersCollection.find({ role: "instructor" }).toArray()
       res.send(result)
     })
 
@@ -170,7 +156,7 @@ async function run() {
     })
     // getting popular instructors
     app.get("/instructors/popular", async (req, res) => {
-      const result = await instructorCollection.find().sort({ students_in_class: -1 }).limit(6).toArray()
+      const result = await usersCollection.find({ role: "instructor" }).sort({ students_in_class: -1 }).limit(6).toArray()
       res.send(result)
     })
 
@@ -264,9 +250,9 @@ async function run() {
 
 
     // instructors activity here
-    
-    // instructors adding class to db
-    app.post("/addNewClass", verifyJWT, verifyInstructor, async(req,res)=>{
+    // .................................................................
+    // instructors adding new class to db
+    app.post("/addNewClass", verifyJWT, verifyInstructor, async (req, res) => {
       const newClass = req.body;
       newClass.students_in_class = 0;
       newClass.status = "pending";
@@ -274,57 +260,95 @@ async function run() {
       res.send(result)
     })
 
+    // get a specific instructos all class
+    app.get("/instructorsAllClass", verifyJWT, verifyInstructor, async (req, res) => {
+      const email = req.query.email;
+      if (email !== req?.decoded?.email) {
+        return res.status(403).send({ error: true, message: "forbidden access" })
+      }
+      const result = await classCollection.find({ instructor_email: email }).toArray()
+      res.send(result);
+    })
+    // ..........................................................................
 
+    // Admin activity
+    // ...............................................................
+    // get all user
+    app.get("/users", verifyJWT, verifyAdmin, async (req, res) => {
+      const result = await usersCollection.find().toArray()
+      res.send(result)
+    })
+    // make admin
+    app.post("/makeAdmin", verifyJWT, verifyAdmin, async (req, res) => {
+      const email = req.body.email;
+      const filter = {
+        email: email
+      }
+      const updateDoc = {
+        $set: {
+          role: "admin"
+        },
+      }
+      const result = await usersCollection.updateOne(filter, updateDoc)
+      res.send(result)
 
+    })
+    // make instructor
+    app.post("/makeInstructor", verifyJWT, verifyAdmin, async (req, res) => {
+      const email = req.body.email;
+      const filter = {
+        email: email
+      }
+      console.log(email);
+      const updateDoc = {
+        $set: {
+          role: "instructor",
+          classes_taken: 0,
+          students_in_class: 0
+        },
+      }
+      const result = await usersCollection.updateOne(filter, updateDoc)
+      res.send(result)
 
-
-    // app.patch("/users/admin/:id", async (req, res) => {
-    //   const id = req.params.id;
-    //   // console.log(id);
-    //   const filter = { _id: new ObjectId(id) };
-    //   const updateDoc = {
-    //     $set: {
-    //       role: "admin"
-    //     },
-    //   }
-    //   const result = await usersCollection.updateOne(filter, updateDoc);
-    //   res.send(result);
-    // })
-    // ........................................ 
-    // dummy api to update all field. 
-    // app.get("/statusupdate", async (req, res) => {
-    //   const fieldToAdd = 'students_in_class';
-    //   const fieldValue = 20;
-    //   const result = classCollection.updateMany({}, { $set: { [fieldToAdd]: fieldValue } })
-    //   res.send(result)
-    // })
-
-    // secure all users route
-    /** 
-     * 0. dont show secure links to every one.
-     * 1. use verifyJWT
-     * 2. use verifyAdmin middleware
-     *  
-    */
-
-
-
+    })
+    // getting all classes for admin dashoboard 
+    app.get("/getAllClasses", verifyJWT, verifyAdmin, async (req, res) => {
+      const result = await classCollection.find().toArray()
+      res.send(result)
+    })
+    // changing class status to approve from admin dashboard 
+    app.post("/changeClassStatus/:id", verifyJWT, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const status = req.body.status;
+      const updateDoc = {
+        $set: {
+          status: status
+        }
+      }
+      const filter = { _id: new ObjectId(id) }
+      const result = await classCollection.updateOne(filter, updateDoc)
+      res.send(result)
+    })
+    // adding feedback
+    app.post("/addFeedback", verifyJWT, verifyAdmin, async (req, res) => {
+      const feedback = req.body.feedback;
+      const id = req.body.id;
+      const filter = { _id: new ObjectId(id) }
+      const updateDoc = {
+        $set: {
+          feedback: feedback
+        }
+      }
+      const result = await classCollection.updateOne(filter, updateDoc)
+      res.send(result)
+    })
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
-    // Ensures that the client will close when you finish/error
-    // await client.close();
+
   }
 }
 run().catch(console.dir);
-
-
-
-
-
-
-
-
 
 
 

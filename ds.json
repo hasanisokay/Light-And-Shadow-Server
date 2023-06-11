@@ -1,0 +1,66 @@
+[
+    {
+      "image": "https://i.ibb.co/xCwc8mT/1.jpg",
+      "name": "John Smith",
+      "email": "john.smith@lightandshadow.com",
+      "students_in_class": 145,
+      "classes_taken": 8,
+      "role": "instructor"
+    },
+    {
+      "image": "https://i.ibb.co/w7gpBTW/2.jpg",
+      "name": "Daniel Johnson",
+      "email": "daniel.johnson@lightandshadow.com",
+      "students_in_class": 80,
+      "classes_taken": 5,
+      "role": "instructor"
+    },
+    {
+      "image": "https://i.ibb.co/StyVHQZ/3.jpg",
+      "name": "Michael Davis",
+      "email": "michael.davis@lightandshadow.com",
+      "students_in_class": 180,
+      "classes_taken": 8,
+      "role": "instructor"
+    },
+    {
+      "image": "https://i.ibb.co/xh7Tc6f/4.jpg",
+      "name": "Abdullah Hasan",
+      "email": "abdullah.hasan@lightandshadow.com",
+      "students_in_class": 400,
+      "classes_taken": 10,
+      "role": "instructor"
+    },
+    {
+      "image": "https://i.ibb.co/nw5ys0D/5.jpg",
+      "name": "David Wilson",
+      "email": "david.wilson@lightandshadow.com",
+      "students_in_class": 20,
+      "classes_taken": 1,
+      "role": "instructor"
+    },
+    {
+      "image": "https://i.ibb.co/pxsMVg2/20.jpg",
+      "name": "Hamidani Josh",
+      "email": "hamidani.josh@lightandshadow.com",
+      "students_in_class": 100,
+      "classes_taken": 4,
+      "role": "instructor"
+    },
+    {
+      "image": "https://i.ibb.co/HTsvH3m/7.jpg",
+      "name": "James Willium",
+      "email": "james.willium@lightandshadow.com",
+      "students_in_class": 70,
+      "classes_taken": 3,
+      "role": "instructor"
+    },
+    {
+      "image": "https://i.ibb.co/8MCCqsP/8.jpg",
+      "name": "Rakib Uddin",
+      "email": "rakib.uddin@lightandshadow.com",
+      "students_in_class": 140,
+      "classes_taken": 8,
+      "role": "instructor"
+    }
+  ]
