@@ -193,11 +193,12 @@ async function run() {
       let filteredIds = []
       const filterdData = foundIds.filter(item => {
         if (item.status === status) {
-          filteredIds.push(new ObjectId(item.classId))
+          filteredIds.push(item.classId)
         }
       })
+      console.log(filteredIds);
       // console.log("hitted with", status);
-      const classes = await classCollection.find({ _id: { $in: filteredIds } }).toArray()
+      const classes = await classCollection.find({_id:{ $in:filteredIds}}).toArray()
       res.send(classes)
     });
 
