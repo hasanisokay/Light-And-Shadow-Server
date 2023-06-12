@@ -50,6 +50,7 @@ async function run() {
     const paymentCollection = client.db("lightAndShadow").collection("payments")
     const studentFeedbackCollection = client.db("lightAndShadow").collection("studentsFeedback")
 
+
     // jwt
     app.post("/jwt", (req, res) => {
       const userMail = req.body;
@@ -82,7 +83,7 @@ async function run() {
 
     // getting all the approved classes
     app.get("/classes", async (req, res) => {
-      const result = await classCollection.find({ status: "approved" }).toArray()
+      const result = await classCollection.find({status:"approved"}).toArray()
       res.send(result)
     })
 
@@ -202,6 +203,7 @@ async function run() {
       res.send(classes)
     });
 
+
     // deleting students selected class
     app.delete("/deleteClass/:id", verifyJWT, async (req, res) => {
       const id = req.params.id;
@@ -264,6 +266,7 @@ async function run() {
     })
 
 
+
     // instructors activity here
     // .................................................................
     // instructors adding new class to db
@@ -274,6 +277,7 @@ async function run() {
       const result = await classCollection.insertOne(newClass)
       res.send(result)
     })
+
 
     // get a specific instructos all class
     app.get("/instructorsAllClass", verifyJWT, verifyInstructor, async (req, res) => {
