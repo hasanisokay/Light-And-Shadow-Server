@@ -83,7 +83,7 @@ async function run() {
 
     // getting all the approved classes
     app.get("/classes", async (req, res) => {
-      const result = await classCollection.find({status:"approved"}).toArray()
+      const result = await classCollection.find({ status: "approved" }).toArray()
       res.send(result)
     })
 
@@ -99,7 +99,7 @@ async function run() {
       res.send(result)
     })
     // getting all students feedback
-    app.get("/stuedntsFeedback", async(req,res)=>{
+    app.get("/stuedntsFeedback", async (req, res) => {
       const result = await studentFeedbackCollection.find().toArray()
       res.send(result)
     })
@@ -187,6 +187,7 @@ async function run() {
       const decodedEmail = req.decoded?.email;
       const email = req.query?.email;
       const status = req.query?.status;
+      // console.log(email,status);
       if (email !== decodedEmail) {
         return res.status(403).send({ error: true, message: "forbidden access" })
       }
@@ -197,9 +198,9 @@ async function run() {
           filteredIds.push(item.classId)
         }
       })
-      console.log(filteredIds);
+      // console.log(filteredIds);
       // console.log("hitted with", status);
-      const classes = await classCollection.find({_id:{ $in:filteredIds}}).toArray()
+      const classes = await classCollection.find({ _id: { $in: filteredIds } }).toArray()
       res.send(classes)
     });
 
@@ -225,17 +226,20 @@ async function run() {
       })
     })
 
+    // const paidClassId = paymentData.paidForClass._id
+    // const filterForNumber = {_id: new ObjectId(paidClassId)} 
+    // const updateDoc ={
+    //   $inc: {
+    //     students_in_class: 1,
+    //     available_seats: -1
+    //   }
+    // }
+    // const upClass = await classCollection.updateOne(filterForNumber, updateDoc)
+    // console.log("from payments upclass",upClass);
+
     // adding successfull payments to db
     app.post("/payments", verifyJWT, async (req, res) => {
       const paymentData = req.body;
-      const paidClassId = paymentData.paidForClass._id
-      const filter = {_id: new ObjectId(paidClassId)} 
-      const updateDoc ={
-        $inc: {
-          students_in_class: 1
-        }
-      }
-      const increaClassInStudnets = await classCollection.updateOne(filter, updateDoc)
       const result = await paymentCollection.insertOne(paymentData);
       res.send(result)
     })
@@ -248,13 +252,22 @@ async function run() {
           status: 'enrolled'
         }
       }
-      const reduceAvailableSeats = await classCollection.findOneAndUpdate(
-        { _id: new ObjectId(id) },
-        { $inc: { available_seats: -1 } },
-        { returnOriginal: false }
-      )
       const result = await selectedClassCollection.updateOne(filter, updateDoc);
-      console.log(result);
+      res.send(result)
+    })
+    app.get("/updateSeatAndStudent", verifyJWT, async (req, res) => {
+      const id = req?.query?.id;
+      // const seat = parseInt(req?.query?.seat);
+      // const student = parseInt(req?.query?.student);
+      // console.log(id,seat,student);
+      const filter = { _id: id}
+      const updateDoc = {
+        $inc: {
+          students_in_class: 1,
+          available_seats: -1
+        }
+      };
+      const result = await classCollection.updateOne(filter, updateDoc)
       res.send(result)
     })
 
