@@ -48,6 +48,7 @@ async function run() {
     const classCollection = client.db("lightAndShadow").collection("classes")
     const selectedClassCollection = client.db("lightAndShadow").collection("selectedClass")
     const paymentCollection = client.db("lightAndShadow").collection("payments")
+    const studentFeedbackCollection = client.db("lightAndShadow").collection("studentsFeedback")
 
     // jwt
     app.post("/jwt", (req, res) => {
@@ -90,10 +91,15 @@ async function run() {
       const instructorId = req.params.id;
       const queryForInstructor = { _id: new ObjectId(instructorId) }
       const instructor = await usersCollection.findOne(queryForInstructor)
-      const name = instructor.name;
+      const email = instructor.email;
 
-      const queryForClasses = { class_instructor_name: name }
+      const queryForClasses = { instructor_email: email, status: "approved" }
       const result = await classCollection.find(queryForClasses).toArray()
+      res.send(result)
+    })
+    // getting all students feedback
+    app.get("/stuedntsFeedback", async(req,res)=>{
+      const result = await studentFeedbackCollection.find().toArray()
       res.send(result)
     })
 
